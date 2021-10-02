@@ -59,7 +59,7 @@ class ParserCian:
         if not link_block:
             logging.error('Link not found')
             return
-        link = link_block.text
+        link = link_block.get('href')
 
         self._result.append(
             {
@@ -69,14 +69,32 @@ class ParserCian:
                 'address': address,
                 'price': price,
                 'author_id': author_id,
-                'link': link
+                'url': link,
+                'phone': self.parse_phone(link),
             }
         )
+
+    def parse_phone(self, url: str):
+        response = self._session.get(url)
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+        text = response.text
+
+        soup = bs4.BeautifulSoup(text, 'lxml')
+        phone_block = soup.select_one('a.a10a3f92e9--phone--3XYRR')
+        if not phone_block:
+            logging.error('Phone not found')
+            return
+        phone = phone_block.text
+        return phone
+
+    def run(self):
+        page = self.load_page()
+        self.parse_page(page)
+        logging.info('Success!')
+        return self._result
 
 
 if __name__ == '__main__':
     cian = ParserCian('https://www.cian.ru/snyat-kvartiru/')
-    page = cian.load_page()
-    cian.parse_page(page)
-    print(cian._result)
-    print(len(cian._result))
+    print(cian.run())
